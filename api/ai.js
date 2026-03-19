@@ -10,6 +10,7 @@ export default async function handler(req, res) {
     body: JSON.stringify({
       model: "llama3-70b-8192",
       messages: [
+        { role: "system", content: "You are an AR AI assistant. Keep answers short." },
         { role: "user", content: prompt }
       ]
     })
