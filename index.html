@@ -8,165 +8,85 @@
     body {
       margin: 0;
       font-family: sans-serif;
-      background: radial-gradient(circle at center, #0a0f2a, #000);
+      background: black;
       color: #00ffd5;
-    }
-
-    .container {
-      padding: 20px;
       text-align: center;
     }
 
-    h1 {
-      font-size: 32px;
-      text-shadow: 0 0 20px #00ffd5;
-    }
-
     input {
-      width: 70%;
+      width: 60%;
       padding: 15px;
+      margin-top: 20px;
       background: transparent;
       border: 2px solid #00ffd5;
       color: #00ffd5;
-      border-radius: 10px;
-      margin-top: 20px;
     }
 
     button {
       padding: 15px;
       background: #00ffd5;
       border: none;
-      border-radius: 10px;
-      margin-left: 10px;
       cursor: pointer;
     }
 
-    .chat {
+    iframe {
+      width: 90%;
+      height: 400px;
       margin-top: 20px;
+      border: 2px solid #00ffd5;
+      background: white;
     }
 
-    .bubble {
-      margin: 10px auto;
-      padding: 15px;
-      max-width: 80%;
-      border-radius: 15px;
-      box-shadow: 0 0 20px #00ffd5;
-    }
-
-    .user { background: rgba(0,255,200,0.1); }
-    .ai { background: rgba(0,255,200,0.2); }
-
-    .projects {
-      margin-top: 30px;
-    }
-
-    .card {
-      padding: 15px;
-      margin: 10px;
-      border: 1px solid #00ffd5;
-      border-radius: 10px;
-      cursor: grab;
+    pre {
+      text-align: left;
+      width: 90%;
+      margin: auto;
+      margin-top: 20px;
+      background: #111;
+      padding: 10px;
+      overflow: auto;
     }
   </style>
 </head>
 
 <body>
-<div class="container">
 
-  <h1>🚀 HALO AI BUILDER</h1>
+<h1>🚀 HALO AI APP BUILDER</h1>
 
-  <input id="input" placeholder="Kuvaile app... (esim. tee chat app)" />
-  <button onclick="send()">Run</button>
+<input id="prompt" placeholder="Tee sovellus...">
+<button onclick="build()">Build</button>
 
-  <div class="chat" id="chat"></div>
+<iframe id="preview"></iframe>
 
-  <div class="projects">
-    <h2>Projektit</h2>
-    <div id="projects"></div>
-  </div>
-
-</div>
+<pre id="code"></pre>
 
 <script>
-let history = JSON.parse(localStorage.getItem("history") || "[]");
-let projects = JSON.parse(localStorage.getItem("projects") || "[]");
-
-function save() {
-  localStorage.setItem("history", JSON.stringify(history));
-  localStorage.setItem("projects", JSON.stringify(projects));
-}
-
-function addMessage(role, text) {
-  const div = document.createElement("div");
-  div.className = "bubble " + role;
-  div.innerText = text;
-  document.getElementById("chat").appendChild(div);
-}
-
-async function send() {
-  const input = document.getElementById("input");
-  const text = input.value;
-
-  if (!text) return;
-
-  addMessage("user", text);
-
-  history.push({ role: "user", content: text });
+async function build() {
+  const prompt = document.getElementById("prompt").value;
 
   const res = await fetch("/api/ai", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: text, history })
+    body: JSON.stringify({ message: prompt })
   });
 
   const data = await res.json();
 
-  addMessage("ai", data.reply);
+  document.getElementById("code").innerText = data.reply;
 
-  history.push({ role: "assistant", content: data.reply });
+  // 🔥 parse code
+  const html = data.reply.split("---HTML---")[1]?.split("---CSS---")[0] || "";
+  const css = data.reply.split("---CSS---")[1]?.split("---JS---")[0] || "";
+  const js = data.reply.split("---JS---")[1] || "";
 
-  // 🔥 Luo projekti automaattisesti
-  const project = {
-    name: text,
-    content: data.reply
-  };
+  const final = `
+    <style>${css}</style>
+    ${html}
+    <script>${js}<\/script>
+  `;
 
-  projects.push(project);
-
-  renderProjects();
-  save();
-
-  input.value = "";
+  document.getElementById("preview").srcdoc = final;
 }
-
-function renderProjects() {
-  const el = document.getElementById("projects");
-  el.innerHTML = "";
-
-  projects.forEach((p, i) => {
-    const div = document.createElement("div");
-    div.className = "card";
-    div.draggable = true;
-    div.innerText = p.name;
-
-    div.ondragstart = (e) => {
-      e.dataTransfer.setData("text/plain", i);
-    };
-
-    el.appendChild(div);
-  });
-}
-
-// drag area
-document.body.ondrop = (e) => {
-  e.preventDefault();
-  const index = e.dataTransfer.getData("text");
-  alert("Avasit projektin:\n\n" + projects[index].content);
-};
-
-document.body.ondragover = (e) => e.preventDefault();
-
-renderProjects();
 </script>
 
 </body>
