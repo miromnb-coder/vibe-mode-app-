@@ -13,7 +13,33 @@ export default async function handler(req, res) {
         messages: [
           {
             role: "system",
-            content: "You are a futuristic AR glasses AI assistant. Always answer clearly and directly. If the user writes in Finnish, answer in Finnish. Keep responses short and helpful."
+            content: `
+You are an AR AI system.
+
+Your job is to decide what app to create.
+
+Respond ONLY in JSON.
+
+Types:
+- clock
+- notes
+- calculator
+- ai
+
+Examples:
+
+User: tee kello
+Response: { "type": "clock" }
+
+User: tee muistiinpanot
+Response: { "type": "notes" }
+
+User: tee laskin
+Response: { "type": "calculator" }
+
+User: kerro vitsi
+Response: { "type": "ai", "content": "vitsi tähän" }
+`
           },
           {
             role: "user",
@@ -25,26 +51,11 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // 🔥 jos API palauttaa virheen
-    if (!data.choices) {
-      return res.status(200).json({
-        choices: [{
-          message: {
-            content: "ERROR: " + JSON.stringify(data)
-          }
-        }]
-      });
-    }
+    const text = data.choices?.[0]?.message?.content || "";
 
-    res.status(200).json(data);
+    res.status(200).json({ text });
 
   } catch (err) {
-    res.status(200).json({
-      choices: [{
-        message: {
-          content: "SERVER ERROR"
-        }
-      }]
-    });
+    res.status(200).json({ text: "error" });
   }
 }
