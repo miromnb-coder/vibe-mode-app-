@@ -1,37 +1,173 @@
 <!DOCTYPE html>
-<html lang="fi">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Halo Builder Pro</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
+  <meta charset="UTF-8" />
+  <title>Halo AI Builder</title>
 
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: radial-gradient(circle at center, #0a0f2a, #000);
+      color: #00ffd5;
+    }
+
+    .container {
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 32px;
+      text-shadow: 0 0 20px #00ffd5;
+    }
+
+    input {
+      width: 70%;
+      padding: 15px;
+      background: transparent;
+      border: 2px solid #00ffd5;
+      color: #00ffd5;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+
+    button {
+      padding: 15px;
+      background: #00ffd5;
+      border: none;
+      border-radius: 10px;
+      margin-left: 10px;
+      cursor: pointer;
+    }
+
+    .chat {
+      margin-top: 20px;
+    }
+
+    .bubble {
+      margin: 10px auto;
+      padding: 15px;
+      max-width: 80%;
+      border-radius: 15px;
+      box-shadow: 0 0 20px #00ffd5;
+    }
+
+    .user { background: rgba(0,255,200,0.1); }
+    .ai { background: rgba(0,255,200,0.2); }
+
+    .projects {
+      margin-top: 30px;
+    }
+
+    .card {
+      padding: 15px;
+      margin: 10px;
+      border: 1px solid #00ffd5;
+      border-radius: 10px;
+      cursor: grab;
+    }
+  </style>
+</head>
+
+<body>
 <div class="container">
 
-  <div class="header">
-    <div class="logo">🔥 Halo</div>
-    <div class="avatar">M</div>
-  </div>
+  <h1>🚀 HALO AI BUILDER</h1>
 
-  <div class="hero">
-    <h1>Rakennetaan jotain, Miro</h1>
-  </div>
+  <input id="input" placeholder="Kuvaile app... (esim. tee chat app)" />
+  <button onclick="send()">Run</button>
 
-  <div class="input-box">
-    <input id="input" placeholder="Kysy AI:ta luomaan sovellus..." />
-    <button onclick="start()">⬆️</button>
-  </div>
+  <div class="chat" id="chat"></div>
 
-  <div class="tabs">
-    <button onclick="showProjects()">Projektit</button>
-    <button onclick="clearScreen()">Tyhjennä</button>
+  <div class="projects">
+    <h2>Projektit</h2>
+    <div id="projects"></div>
   </div>
 
 </div>
 
-<div id="ar-layer"></div>
+<script>
+let history = JSON.parse(localStorage.getItem("history") || "[]");
+let projects = JSON.parse(localStorage.getItem("projects") || "[]");
 
-<script src="app.js"></script>
+function save() {
+  localStorage.setItem("history", JSON.stringify(history));
+  localStorage.setItem("projects", JSON.stringify(projects));
+}
+
+function addMessage(role, text) {
+  const div = document.createElement("div");
+  div.className = "bubble " + role;
+  div.innerText = text;
+  document.getElementById("chat").appendChild(div);
+}
+
+async function send() {
+  const input = document.getElementById("input");
+  const text = input.value;
+
+  if (!text) return;
+
+  addMessage("user", text);
+
+  history.push({ role: "user", content: text });
+
+  const res = await fetch("/api/ai", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: text, history })
+  });
+
+  const data = await res.json();
+
+  addMessage("ai", data.reply);
+
+  history.push({ role: "assistant", content: data.reply });
+
+  // 🔥 Luo projekti automaattisesti
+  const project = {
+    name: text,
+    content: data.reply
+  };
+
+  projects.push(project);
+
+  renderProjects();
+  save();
+
+  input.value = "";
+}
+
+function renderProjects() {
+  const el = document.getElementById("projects");
+  el.innerHTML = "";
+
+  projects.forEach((p, i) => {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.draggable = true;
+    div.innerText = p.name;
+
+    div.ondragstart = (e) => {
+      e.dataTransfer.setData("text/plain", i);
+    };
+
+    el.appendChild(div);
+  });
+}
+
+// drag area
+document.body.ondrop = (e) => {
+  e.preventDefault();
+  const index = e.dataTransfer.getData("text");
+  alert("Avasit projektin:\n\n" + projects[index].content);
+};
+
+document.body.ondragover = (e) => e.preventDefault();
+
+renderProjects();
+</script>
+
 </body>
 </html>
