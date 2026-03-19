@@ -1,28 +1,43 @@
 <!DOCTYPE html>
-<html>
+<html lang="fi">
 <head>
-  <title>Halo AR AI</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>Halo Builder</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h1>HALO AR</h1>
+<div class="container">
 
-<input id="input" placeholder="Say or type..." />
-<button onclick="start()">Run</button>
-<button onclick="startVoice()">🎤 Speak</button>
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">🔥 Halo</div>
+    <div class="avatar">M</div>
+  </div>
 
-<div id="apps"></div>
+  <!-- HERO -->
+  <div class="hero">
+    <h1>Rakennetaan jotain, Miro</h1>
+  </div>
+
+  <!-- INPUT -->
+  <div class="input-box">
+    <input id="input" placeholder="Kysy Haloa luomaan sovellus..." />
+    <button onclick="start()">⬆️</button>
+  </div>
+
+  <!-- BUTTONS -->
+  <div class="tabs">
+    <button>Omat projektit</button>
+    <button>Viimeisimmät</button>
+    <button>Mallit</button>
+  </div>
+
+</div>
 
 <!-- AR layer -->
 <div id="ar-layer"></div>
 
 <script src="app.js"></script>
-
 </body>
 </html>
-<input id="input" placeholder="Kysy jotain..." />
-<button onclick="start()">Run</button>
-
-<div id="apps"></div>
