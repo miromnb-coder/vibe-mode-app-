@@ -1,4 +1,4 @@
-// 🔥 AI kysely backendiin
+// 🔥 BACKEND AI
 async function askAI(prompt) {
   const res = await fetch("/api/ai", {
     method: "POST",
@@ -12,44 +12,66 @@ async function askAI(prompt) {
   return data.choices?.[0]?.message?.content || "Ei vastausta";
 }
 
-// 👓 Näyttää appin ruudulla
+// 📦 UI kortti
 function addApp(title, content) {
-  const container = document.getElementById("apps");
-
   const div = document.createElement("div");
-  div.style.background = "black";
-  div.style.color = "lime";
-  div.style.padding = "10px";
-  div.style.margin = "10px";
-  div.style.borderRadius = "10px";
-
   div.innerHTML = `<strong>${title}</strong><br>${content}`;
-
-  container.appendChild(div);
+  document.getElementById("apps").appendChild(div);
 }
 
-// 🎤 Pää AI + fallback logiikka
+// 👓 AR overlay
+function createARApp(title, content) {
+  const layer = document.getElementById("ar-layer");
+
+  const box = document.createElement("div");
+  box.className = "ar-box";
+
+  box.style.top = Math.random() * 70 + "%";
+  box.style.left = Math.random() * 70 + "%";
+
+  box.innerHTML = `<strong>${title}</strong><br>${content}`;
+  layer.appendChild(box);
+}
+
+// 🧠 PÄÄLOGIIKKA
 async function runHalo(input) {
 
-  // 🤖 Yritä AI
   try {
     const ai = await askAI(input);
+
     addApp("🤖 AI", ai);
+    createARApp("AI", ai);
+
     return;
+
   } catch (e) {
-    console.log("AI error", e);
+    console.log("AI error");
   }
 
-  // ⏰ fallback
-  if (input.toLowerCase().includes("time")) {
-    addApp("⏰ Time", new Date().toLocaleTimeString());
+  // fallback
+  if (input.includes("time")) {
+    const t = new Date().toLocaleTimeString();
+    createARApp("⏰ Clock", t);
   } else {
-    addApp("⚠️", "AI ei toimi vielä");
+    createARApp("⚠️", "Ei tunnistettu");
   }
 }
 
-// 🎤 nappi trigger
+// ▶️ nappi
 function start() {
   const input = document.getElementById("input").value;
   runHalo(input);
+}
+
+// 🎤 puhe
+function startVoice() {
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = "fi-FI";
+
+  recognition.onresult = function(event) {
+    const text = event.results[0][0].transcript;
+    runHalo(text);
+  };
+
+  recognition.start();
 }
