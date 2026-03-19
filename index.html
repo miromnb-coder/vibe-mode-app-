@@ -1,32 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Halo Clone</title>
+  <title>Halo AR AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="hud">
+<h1>HALO AR</h1>
 
-  <div class="topbar">
-    <span>HALO</span>
-    <span id="status">● READY</span>
-  </div>
+<input id="input" placeholder="Say or type..." />
+<button onclick="start()">Run</button>
+<button onclick="startVoice()">🎤 Speak</button>
 
-  <div class="center">
-    <div id="orb">●</div>
-    <p id="text">Say something...</p>
-  </div>
+<div id="apps"></div>
 
-  <div id="apps"></div>
+<!-- AR layer -->
+<div id="ar-layer"></div>
 
-  <div class="controls">
-    <button onclick="startVoice()">🎤</button>
-  </div>
-
-</div>
-
-<script src="memory.js"></script>
 <script src="app.js"></script>
 
 </body>
