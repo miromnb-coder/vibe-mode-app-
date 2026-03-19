@@ -3,36 +3,52 @@ body {
   background: black;
   color: #00ffc8;
   font-family: monospace;
-}
-
-.hud {
   text-align: center;
 }
 
-.topbar {
-  display: flex;
-  justify-content: space-between;
+input {
   padding: 10px;
-  border-bottom: 1px solid #00ffc8;
+  width: 60%;
+  background: black;
+  border: 1px solid #00ffc8;
+  color: #00ffc8;
 }
 
-#orb {
-  font-size: 40px;
-  animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-  0% {opacity: 0.3;}
-  50% {opacity: 1;}
-  100% {opacity: 0.3;}
+button {
+  padding: 10px;
+  margin: 5px;
+  background: #00ffc8;
+  border: none;
+  cursor: pointer;
 }
 
 #apps {
   margin-top: 20px;
 }
 
-.app {
+#ar-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.ar-box {
+  position: absolute;
+  padding: 15px;
+  border-radius: 12px;
+  background: rgba(0,255,200,0.08);
   border: 1px solid #00ffc8;
-  margin: 10px;
-  padding: 10px;
+  color: #00ffc8;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 20px #00ffc8;
+  animation: float 3s infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0); }
 }
