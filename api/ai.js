@@ -9,21 +9,41 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama-3.1-8b-instant", // 🔥 TÄRKEIN FIX
+        model: "llama-3.1-8b-instant",
         messages: [
-          { role: "user", content: prompt }
+          {
+            role: "system",
+            content: "You are a futuristic AR glasses AI assistant. Always answer clearly and directly. If the user writes in Finnish, answer in Finnish. Keep responses short and helpful."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
         ]
       })
     });
 
     const data = await response.json();
 
+    // 🔥 jos API palauttaa virheen
+    if (!data.choices) {
+      return res.status(200).json({
+        choices: [{
+          message: {
+            content: "ERROR: " + JSON.stringify(data)
+          }
+        }]
+      });
+    }
+
     res.status(200).json(data);
 
   } catch (err) {
     res.status(200).json({
       choices: [{
-        message: { content: "SERVER ERROR" }
+        message: {
+          content: "SERVER ERROR"
+        }
       }]
     });
   }
