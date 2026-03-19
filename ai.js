@@ -1,25 +1,27 @@
 async function generateApp(prompt) {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${CONFIG.API_KEY}`,
-      "Content-Type": "application/json"
+      "x-api-key": CONFIG.API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json"
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model: "claude-3-haiku-20240307",
+      max_tokens: 2000,
       messages: [
         {
-          role: "system",
-          content: "You generate small web apps for AR glasses. Return ONLY clean HTML."
-        },
-        {
           role: "user",
-          content: prompt
+          content: `You generate small web apps for AR glasses.
+Return ONLY clean HTML.
+
+User request: ${prompt}`
         }
       ]
     })
   });
 
   const data = await response.json();
-  return data.choices[0].message.content;
+
+  return data.content[0].text;
 }
