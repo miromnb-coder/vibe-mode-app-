@@ -2,40 +2,34 @@
 <html lang="fi">
 <head>
   <meta charset="UTF-8">
-  <title>Halo Builder</title>
+  <title>Halo Builder Pro</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="container">
 
-  <!-- HEADER -->
   <div class="header">
     <div class="logo">🔥 Halo</div>
     <div class="avatar">M</div>
   </div>
 
-  <!-- HERO -->
   <div class="hero">
     <h1>Rakennetaan jotain, Miro</h1>
   </div>
 
-  <!-- INPUT -->
   <div class="input-box">
-    <input id="input" placeholder="Kysy Haloa luomaan sovellus..." />
+    <input id="input" placeholder="Kysy AI:ta luomaan sovellus..." />
     <button onclick="start()">⬆️</button>
   </div>
 
-  <!-- BUTTONS -->
   <div class="tabs">
-    <button>Omat projektit</button>
-    <button>Viimeisimmät</button>
-    <button>Mallit</button>
+    <button onclick="showProjects()">Projektit</button>
+    <button onclick="clearScreen()">Tyhjennä</button>
   </div>
 
 </div>
 
-<!-- AR layer -->
 <div id="ar-layer"></div>
 
 <script src="app.js"></script>
