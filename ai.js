@@ -1,27 +1,25 @@
-async function generateApp(prompt) {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+async function askAI(prompt) {
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
-      "x-api-key": CONFIG.API_KEY,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json"
+      "Authorization": "Bearer SINUN_API_KEY",
+      "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "claude-3-haiku-20240307",
-      max_tokens: 2000,
+      model: "llama3-70b-8192",
       messages: [
         {
+          role: "system",
+          content: "You are an AI assistant for AR smart glasses. Keep answers short and useful."
+        },
+        {
           role: "user",
-          content: `You generate small web apps for AR glasses.
-Return ONLY clean HTML.
-
-User request: ${prompt}`
+          content: prompt
         }
       ]
     })
   });
 
   const data = await response.json();
-
-  return data.content[0].text;
+  return data.choices?.[0]?.message?.content || "No response";
 }
