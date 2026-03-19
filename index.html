@@ -1,23 +1,33 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Vibe Mode</title>
+  <title>Halo Clone</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div class="container">
-    <h1>Vibe Mode</h1>
+<div class="hud">
 
-    <input id="prompt" placeholder="Create AR navigation arrows..." />
-    <button onclick="createApp()">Generate</button>
-
-    <div id="output"></div>
+  <div class="topbar">
+    <span>HALO</span>
+    <span id="status">● READY</span>
   </div>
 
-  <script src="config.js"></script>
-  <script src="ai.js"></script>
-  <script src="app.js"></script>
+  <div class="center">
+    <div id="orb">●</div>
+    <p id="text">Say something...</p>
+  </div>
+
+  <div id="apps"></div>
+
+  <div class="controls">
+    <button onclick="startVoice()">🎤</button>
+  </div>
+
+</div>
+
+<script src="memory.js"></script>
+<script src="app.js"></script>
 
 </body>
 </html>
