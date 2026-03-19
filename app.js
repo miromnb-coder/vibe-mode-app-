@@ -1,70 +1,82 @@
+const layer = document.getElementById("ar-layer");
+
+// 💾 memory + projects
+let memory = JSON.parse(localStorage.getItem("memory") || "[]");
+let projects = JSON.parse(localStorage.getItem("projects") || "[]");
+
+function save() {
+  localStorage.setItem("memory", JSON.stringify(memory));
+  localStorage.setItem("projects", JSON.stringify(projects));
+}
+
+// 🤖 AI
 async function askAI(prompt) {
   const res = await fetch("/api/ai", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt })
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ prompt, memory })
   });
 
   const data = await res.json();
   return data.text;
 }
 
-// 👓 UI generator
-function createBox(html) {
-  const layer = document.getElementById("ar-layer");
+// 💬 chat
+function addMessage(text, type="ai") {
+  const el = document.createElement("div");
+  el.className = "chat " + type;
+  el.innerText = text;
 
+  el.style.top = Math.random()*60 + "%";
+  el.style.left = Math.random()*60 + "%";
+
+  layer.appendChild(el);
+}
+
+// 🧩 drag
+function makeDraggable(el) {
+  let offsetX, offsetY;
+
+  el.onmousedown = (e) => {
+    offsetX = e.clientX - el.offsetLeft;
+    offsetY = e.clientY - el.offsetTop;
+
+    document.onmousemove = (e) => {
+      el.style.left = (e.clientX - offsetX) + "px";
+      el.style.top = (e.clientY - offsetY) + "px";
+    };
+
+    document.onmouseup = () => {
+      document.onmousemove = null;
+    };
+  };
+}
+
+// 🧠 render app
+function renderApp(app) {
   const box = document.createElement("div");
   box.className = "ar-box";
 
-  box.style.top = Math.random() * 70 + "%";
-  box.style.left = Math.random() * 70 + "%";
+  box.innerHTML = `
+    <div class="title">${app.title}</div>
+    ${app.code}
+  `;
 
-  box.innerHTML = html;
+  box.style.top = Math.random()*60 + "%";
+  box.style.left = Math.random()*60 + "%";
+
+  makeDraggable(box);
   layer.appendChild(box);
 }
 
-// 🧩 apps
-function clockApp() {
-  const box = document.createElement("div");
-  box.className = "ar-box";
+// 🚀 MAIN
+async function start() {
+  const input = document.getElementById("input").value;
 
-  function update() {
-    box.innerHTML = `<div class="title">⏰ CLOCK</div><div>${new Date().toLocaleTimeString()}</div>`;
-  }
+  memory.push({role:"user", content:input});
+  save();
 
-  setInterval(update, 1000);
-  update();
-
-  document.getElementById("ar-layer").appendChild(box);
-}
-
-function notesApp() {
-  createBox(`
-    <div class="title">📝 NOTES</div>
-    <textarea class="glass-input"></textarea>
-  `);
-}
-
-function calcApp() {
-  createBox(`
-    <div class="title">➕ CALC</div>
-    <input id="calc" class="glass-input" />
-    <button onclick="runCalc()">=</button>
-    <div id="calcResult"></div>
-  `);
-}
-
-function runCalc() {
-  const val = document.getElementById("calc").value;
-  try {
-    document.getElementById("calcResult").innerText = eval(val);
-  } catch {
-    document.getElementById("calcResult").innerText = "error";
-  }
-}
-
-// 🤖 MAIN
-async function runHalo(input) {
+  addMessage(input, "user");
 
   const raw = await askAI(input);
 
@@ -73,31 +85,27 @@ async function runHalo(input) {
   try {
     data = JSON.parse(raw);
   } catch {
-    createBox("⚠️ AI virhe");
+    addMessage(raw, "ai");
     return;
   }
 
-  if (data.type === "clock") return clockApp();
-  if (data.type === "notes") return notesApp();
-  if (data.type === "calculator") return calcApp();
+  if (data.type === "app") {
+    projects.push(data);
+    save();
 
-  if (data.type === "ai") {
-    createBox(`<div class="title">🤖 AI</div>${data.content}`);
+    renderApp(data);
+    addMessage("App luotu: " + data.title, "ai");
   }
 }
 
-function start() {
-  const input = document.getElementById("input").value;
-  runHalo(input);
+// 📦 show projects
+function showProjects() {
+  layer.innerHTML = "";
+
+  projects.forEach(p => renderApp(p));
 }
 
-function startVoice() {
-  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  recognition.lang = "fi-FI";
-
-  recognition.onresult = function(event) {
-    runHalo(event.results[0][0].transcript);
-  };
-
-  recognition.start();
+// 🧹 clear
+function clearScreen() {
+  layer.innerHTML = "";
 }
