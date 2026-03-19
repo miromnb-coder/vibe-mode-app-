@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  const prompt = req.body.prompt;
+  const { prompt, memory } = req.body;
 
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -14,48 +14,30 @@ export default async function handler(req, res) {
           {
             role: "system",
             content: `
-You are an AR AI system.
+You build mini apps.
 
-Your job is to decide what app to create.
+Return JSON only.
 
-Respond ONLY in JSON.
-
-Types:
-- clock
-- notes
-- calculator
-- ai
-
-Examples:
-
-User: tee kello
-Response: { "type": "clock" }
-
-User: tee muistiinpanot
-Response: { "type": "notes" }
-
-User: tee laskin
-Response: { "type": "calculator" }
-
-User: kerro vitsi
-Response: { "type": "ai", "content": "vitsi tähän" }
+FORMAT:
+{
+  "type": "app",
+  "title": "name",
+  "code": "<input><button onclick='...'>"
+}
 `
           },
-          {
-            role: "user",
-            content: prompt
-          }
+          ...memory,
+          { role: "user", content: prompt }
         ]
       })
     });
 
     const data = await response.json();
-
     const text = data.choices?.[0]?.message?.content || "";
 
     res.status(200).json({ text });
 
-  } catch (err) {
+  } catch {
     res.status(200).json({ text: "error" });
   }
 }
