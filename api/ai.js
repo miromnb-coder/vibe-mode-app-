@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { message, history } = req.body;
+    const { message } = req.body;
 
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -13,32 +13,35 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama3-8b-8192", // toimii nyt
+        model: "llama3-70b-8192",
         messages: [
           {
             role: "system",
             content: `
-You are Halo AI Builder.
+You are an elite AI App Builder.
 
-You generate REAL app ideas + UI structures.
+User gives idea → you return FULL WORKING APP CODE.
 
-When user asks something:
-- Respond like a futuristic AI
-- Generate UI components
-- Suggest features
-- Be creative
+Rules:
+- Return ONLY code
+- Use this format:
 
-Also return structured ideas like:
+---HTML---
+<html>...</html>
 
-APP:
-- name
-- features
-- UI layout
-- next steps
+---CSS---
+body {...}
+
+---JS---
+console.log("app");
+
+Make apps modern and clean.
 `
           },
-          ...(history || []),
-          { role: "user", content: message }
+          {
+            role: "user",
+            content: message
+          }
         ]
       })
     });
@@ -46,10 +49,12 @@ APP:
     const data = await response.json();
 
     res.status(200).json({
-      reply: data.choices?.[0]?.message?.content || "No response"
+      reply: data.choices?.[0]?.message?.content || "No code"
     });
 
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(200).json({
+      reply: "ERROR: " + err.message
+    });
   }
 }
