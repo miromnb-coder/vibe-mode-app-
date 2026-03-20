@@ -1,93 +1,72 @@
 <!DOCTYPE html>
-<html>
+<html lang="fi">
 <head>
   <meta charset="UTF-8" />
-  <title>Halo AI Builder</title>
-
-  <style>
-    body {
-      margin: 0;
-      font-family: sans-serif;
-      background: black;
-      color: #00ffd5;
-      text-align: center;
-    }
-
-    input {
-      width: 60%;
-      padding: 15px;
-      margin-top: 20px;
-      background: transparent;
-      border: 2px solid #00ffd5;
-      color: #00ffd5;
-    }
-
-    button {
-      padding: 15px;
-      background: #00ffd5;
-      border: none;
-      cursor: pointer;
-    }
-
-    iframe {
-      width: 90%;
-      height: 400px;
-      margin-top: 20px;
-      border: 2px solid #00ffd5;
-      background: white;
-    }
-
-    pre {
-      text-align: left;
-      width: 90%;
-      margin: auto;
-      margin-top: 20px;
-      background: #111;
-      padding: 10px;
-      overflow: auto;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Halo Builder V2</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-dot">✦</span>
+        <span>Halo Builder V2</span>
+      </div>
+      <div class="topbar-right">
+        <span id="statusPill" class="pill">Ready</span>
+        <div class="avatar">M</div>
+      </div>
+    </header>
 
-<h1>🚀 HALO AI APP BUILDER</h1>
+    <main class="layout">
+      <aside class="left-pane">
+        <section class="hero-card">
+          <h1>Rakennetaan jotain, Miro</h1>
+          <p>Kirjoita idea ja AI tekee siitä oikean appin.</p>
 
-<input id="prompt" placeholder="Tee sovellus...">
-<button onclick="build()">Build</button>
+          <div class="prompt-row">
+            <input id="promptInput" placeholder="Tee todo app, jossa voi poistaa tehtäviä..." />
+            <button id="buildBtn">Build</button>
+          </div>
 
-<iframe id="preview"></iframe>
+          <div class="quick-row">
+            <button class="ghost" data-fill="Tee moderni task app, jossa voi lisätä, poistaa ja merkitä valmiiksi tehtäviä.">Task app</button>
+            <button class="ghost" data-fill="Tee notes app, jossa voi kirjoittaa muistiinpanoja ja tallentaa ne selaimeen.">Notes app</button>
+            <button class="ghost" data-fill="Tee dashboard-app, jossa on kortteja, tilastoja ja tumma futuristinen ulkoasu.">Dashboard</button>
+          </div>
+        </section>
 
-<pre id="code"></pre>
+        <section class="projects-card">
+          <div class="section-head">
+            <h2>Projektit</h2>
+            <button id="clearProjectsBtn" class="small">Tyhjennä</button>
+          </div>
+          <div id="projectBoard" class="project-board"></div>
+        </section>
+      </aside>
 
-<script>
-async function build() {
-  const prompt = document.getElementById("prompt").value;
+      <section class="right-pane">
+        <div class="preview-card">
+          <div class="section-head">
+            <h2 id="previewTitle">Preview</h2>
+            <div class="preview-actions">
+              <button id="previewTabBtn" class="tab active">Preview</button>
+              <button id="codeTabBtn" class="tab">Code</button>
+              <button id="copyBtn" class="small">Copy</button>
+            </div>
+          </div>
 
-  const res = await fetch("/api/ai", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: prompt })
-  });
+          <div id="previewWrap" class="preview-wrap">
+            <iframe id="previewFrame" title="App preview"></iframe>
+          </div>
 
-  const data = await res.json();
+          <pre id="codeView" class="code-view hidden"></pre>
+        </div>
+      </section>
+    </main>
+  </div>
 
-  document.getElementById("code").innerText = data.reply;
-
-  // 🔥 parse code
-  const html = data.reply.split("---HTML---")[1]?.split("---CSS---")[0] || "";
-  const css = data.reply.split("---CSS---")[1]?.split("---JS---")[0] || "";
-  const js = data.reply.split("---JS---")[1] || "";
-
-  const final = `
-    <style>${css}</style>
-    ${html}
-    <script>${js}<\/script>
-  `;
-
-  document.getElementById("preview").srcdoc = final;
-}
-</script>
-
+  <script src="app.js"></script>
 </body>
 </html>
