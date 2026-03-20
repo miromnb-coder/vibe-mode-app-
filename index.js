@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-const STORAGE_KEYS = {
-  projects: "halo_v4_projects",
-  memory: "halo_v4_memory",
-  selectedId: "halo_v4_selected",
+const STORAGE = {
+  projects: "halo_v5_projects",
+  memory: "halo_v5_memory",
+  selected: "halo_v5_selected",
 };
 
 function loadJSON(key, fallback) {
@@ -26,8 +26,8 @@ function uid() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
 }
 
 function normalizeFiles(files = {}) {
@@ -48,57 +48,50 @@ function buildPreviewDoc(files = {}) {
   const html = String(files["index.html"] || "").trim();
   const css = String(files["style.css"] || "");
   const js = String(files["app.js"] || "");
-
   const safeJs = escapeScriptTag(js);
 
   if (!html) {
     return `<!doctype html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <style>${css}</style>
-  </head>
-  <body>
-    <div style="font-family: -apple-system, sans-serif; padding: 24px;">
-      <h2>App preview</h2>
-      <p>AI generated app did not include index.html.</p>
-    </div>
-    <script>${safeJs}</script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>${css}</style>
+</head>
+<body>
+  <div style="font-family:-apple-system,sans-serif;padding:24px;">
+    <h2>No index.html</h2>
+    <p>This project does not include a preview file.</p>
+  </div>
+  <script>${safeJs}</script>
+</body>
 </html>`;
   }
 
   let doc = html;
 
   if (css) {
-    if (doc.includes("</head>")) {
-      doc = doc.replace("</head>", `<style>${css}</style></head>`);
-    } else {
-      doc = `<style>${css}</style>${doc}`;
-    }
+    if (doc.includes("</head>")) doc = doc.replace("</head>", `<style>${css}</style></head>`);
+    else doc = `<style>${css}</style>${doc}`;
   }
 
   if (js) {
-    if (doc.includes("</body>")) {
-      doc = doc.replace("</body>", `<script>${safeJs}</script></body>`);
-    } else {
-      doc += `<script>${safeJs}</script>`;
-    }
+    if (doc.includes("</body>")) doc = doc.replace("</body>", `<script>${safeJs}</script></body>`);
+    else doc += `<script>${safeJs}</script>`;
   }
 
   if (!/<html[\s>]/i.test(doc)) {
     doc = `<!doctype html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    ${css ? `<style>${css}</style>` : ""}
-  </head>
-  <body>
-    ${doc}
-    ${js ? `<script>${safeJs}</script>` : ""}
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  ${css ? `<style>${css}</style>` : ""}
+</head>
+<body>
+  ${doc}
+  ${js ? `<script>${safeJs}</script>` : ""}
+</body>
 </html>`;
   }
 
@@ -119,25 +112,19 @@ export default function Home() {
   const dragRef = useRef(null);
 
   useEffect(() => {
-    const storedProjects = loadJSON(STORAGE_KEYS.projects, []);
-    const storedMemory = loadJSON(STORAGE_KEYS.memory, []);
-    const storedSelectedId = loadJSON(STORAGE_KEYS.selectedId, null);
-
-    setProjects(Array.isArray(storedProjects) ? storedProjects : []);
-    setMemory(Array.isArray(storedMemory) ? storedMemory : []);
-    setSelectedId(storedSelectedId || null);
+    setProjects(loadJSON(STORAGE.projects, []));
+    setMemory(loadJSON(STORAGE.memory, []));
+    setSelectedId(loadJSON(STORAGE.selected, null));
   }, []);
 
   useEffect(() => {
-    saveJSON(STORAGE_KEYS.projects, projects);
-    saveJSON(STORAGE_KEYS.memory, memory);
-    saveJSON(STORAGE_KEYS.selectedId, selectedId);
+    saveJSON(STORAGE.projects, projects);
+    saveJSON(STORAGE.memory, memory);
+    saveJSON(STORAGE.selected, selectedId);
   }, [projects, memory, selectedId]);
 
   useEffect(() => {
-    if (!selectedId && projects.length > 0) {
-      setSelectedId(projects[0].id);
-    }
+    if (!selectedId && projects.length > 0) setSelectedId(projects[0].id);
   }, [projects, selectedId]);
 
   const selectedProject = useMemo(() => {
@@ -149,9 +136,7 @@ export default function Home() {
       setActiveFile("index.html");
       return;
     }
-
-    const files = selectedProject.files || {};
-    const first = Object.keys(files)[0] || "index.html";
+    const first = Object.keys(selectedProject.files || {})[0] || "index.html";
     setActiveFile(first);
   }, [selectedProject?.id]);
 
@@ -159,17 +144,16 @@ export default function Home() {
     if (!selectedProject) {
       return `<!doctype html>
 <html>
-  <body style="margin:0;font-family:-apple-system,sans-serif;display:grid;place-items:center;min-height:100vh;background:#fff;color:#111;">
-    <div>Select a project</div>
-  </body>
+<body style="margin:0;font-family:-apple-system,sans-serif;display:grid;place-items:center;min-height:100vh;background:#fff;color:#111;">
+  <div>Select a project</div>
+</body>
 </html>`;
     }
     return buildPreviewDoc(selectedProject.files || {});
   }, [selectedProject]);
 
-  function setSelectedProject(id) {
-    setSelectedId(id);
-    setMode("preview");
+  function persistMemory(nextMemory) {
+    setMemory(nextMemory);
   }
 
   function pushMemory(role, content) {
@@ -179,15 +163,9 @@ export default function Home() {
   async function askAI(text) {
     const res = await fetch("/api/ai", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        prompt: text,
-        memory,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: text, memory }),
     });
-
     return await res.json();
   }
 
@@ -197,7 +175,6 @@ export default function Home() {
 
     setLoading(true);
     setStatus("Building...");
-
     pushMemory("user", text);
 
     try {
@@ -210,8 +187,8 @@ export default function Home() {
           title: String(data.title || "Untitled App"),
           summary: String(data.summary || text),
           files,
-          x: 20 + Math.random() * 120,
-          y: 20 + Math.random() * 120,
+          x: 18 + Math.random() * 120,
+          y: 18 + Math.random() * 120,
           createdAt: Date.now(),
         };
 
@@ -219,9 +196,9 @@ export default function Home() {
         setSelectedId(project.id);
         setActiveFile(Object.keys(files)[0] || "index.html");
         pushMemory("assistant", `Created project: ${project.title}`);
-        setStatus("Created");
-        setMode("preview");
         setPrompt("");
+        setMode("preview");
+        setStatus("Created");
         return;
       }
 
@@ -250,15 +227,10 @@ export default function Home() {
   }
 
   function deleteProject(id) {
-    setProjects((prev) => {
-      const next = prev.filter((p) => p.id !== id);
-      return next;
-    });
-
+    setProjects((prev) => prev.filter((p) => p.id !== id));
     if (selectedId === id) {
-      const fallback = projects.find((p) => p.id !== id);
-      setSelectedId(fallback ? fallback.id : null);
-      setActiveFile("index.html");
+      const next = projects.find((p) => p.id !== id);
+      setSelectedId(next ? next.id : null);
     }
   }
 
@@ -282,10 +254,15 @@ export default function Home() {
 
   function copyAllFiles() {
     if (!selectedProject) return;
-    const chunks = Object.entries(selectedProject.files || {})
+    const out = Object.entries(selectedProject.files || {})
       .map(([name, content]) => `// FILE: ${name}\n${content}`)
       .join("\n\n");
-    copyToClipboard(chunks);
+    copyToClipboard(out);
+  }
+
+  function openProject(id) {
+    setSelectedId(id);
+    setMode("preview");
   }
 
   function startDrag(e, project) {
@@ -293,39 +270,28 @@ export default function Home() {
     e.preventDefault();
     e.stopPropagation();
 
-    const boardRect = boardRef.current.getBoundingClientRect();
-
+    const rect = boardRef.current.getBoundingClientRect();
     dragRef.current = {
       id: project.id,
       startX: e.clientX,
       startY: e.clientY,
       originX: project.x || 0,
       originY: project.y || 0,
-      boardWidth: boardRect.width,
-      boardHeight: boardRect.height,
+      width: rect.width,
+      height: rect.height,
     };
 
     setStatus("Dragging");
 
     const onMove = (ev) => {
       if (!dragRef.current) return;
-
       const dx = ev.clientX - dragRef.current.startX;
       const dy = ev.clientY - dragRef.current.startY;
+      const cardW = 250;
+      const cardH = 150;
 
-      const cardWidth = 250;
-      const cardHeight = 150;
-
-      const nextX = clamp(
-        dragRef.current.originX + dx,
-        0,
-        Math.max(0, dragRef.current.boardWidth - cardWidth)
-      );
-      const nextY = clamp(
-        dragRef.current.originY + dy,
-        0,
-        Math.max(0, dragRef.current.boardHeight - cardHeight)
-      );
+      const nextX = clamp(dragRef.current.originX + dx, 0, Math.max(0, dragRef.current.width - cardW));
+      const nextY = clamp(dragRef.current.originY + dy, 0, Math.max(0, dragRef.current.height - cardH));
 
       setProjects((prev) =>
         prev.map((p) => (p.id === dragRef.current.id ? { ...p, x: nextX, y: nextY } : p))
@@ -352,7 +318,7 @@ export default function Home() {
       <header className="topbar">
         <div className="brand">
           <span className="spark">✦</span>
-          <span>Halo Builder V4</span>
+          <span>Halo Builder V5</span>
         </div>
         <div className="topbar-right">
           <span className="pill">{status}</span>
@@ -417,9 +383,7 @@ export default function Home() {
 
           <div className="board" ref={boardRef}>
             {projects.length === 0 ? (
-              <div className="empty">
-                Ei projekteja vielä. Kirjoita idea ja paina Build.
-              </div>
+              <div className="empty">Ei projekteja vielä. Kirjoita idea ja paina Build.</div>
             ) : (
               projects.map((project, index) => {
                 const isSelected = project.id === selectedId;
@@ -431,7 +395,7 @@ export default function Home() {
                     key={project.id}
                     className={`projectCard ${isSelected ? "selected" : ""}`}
                     style={{ left, top }}
-                    onClick={() => setSelectedProject(project.id)}
+                    onClick={() => openProject(project.id)}
                   >
                     <div className="cardHead" onPointerDown={(e) => startDrag(e, project)}>
                       <div className="cardTitle">⠿ {project.title}</div>
@@ -444,7 +408,7 @@ export default function Home() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedProject(project.id);
+                          openProject(project.id);
                         }}
                       >
                         Open
@@ -487,16 +451,10 @@ export default function Home() {
           <div className="sectionHead">
             <h2>{selectedProject ? selectedProject.title : "Selected project"}</h2>
             <div className="tabs">
-              <button
-                className={`tab ${mode === "preview" ? "active" : ""}`}
-                onClick={() => setMode("preview")}
-              >
+              <button className={`tab ${mode === "preview" ? "active" : ""}`} onClick={() => setMode("preview")}>
                 Preview
               </button>
-              <button
-                className={`tab ${mode === "code" ? "active" : ""}`}
-                onClick={() => setMode("code")}
-              >
+              <button className={`tab ${mode === "code" ? "active" : ""}`} onClick={() => setMode("code")}>
                 Code
               </button>
             </div>
@@ -506,9 +464,7 @@ export default function Home() {
             <div className="emptyPanel">Valitse projekti vasemmalta.</div>
           ) : (
             <>
-              <div className="summaryBox">
-                {selectedProject.summary || "No summary"}
-              </div>
+              <div className="summaryBox">{selectedProject.summary || "No summary"}</div>
 
               <div className="fileBar">
                 {fileNames.map((name) => (
@@ -543,9 +499,7 @@ export default function Home() {
                 <div>
                   <span className="metaLabel">Created</span>
                   <span className="metaValue">
-                    {selectedProject.createdAt
-                      ? new Date(selectedProject.createdAt).toLocaleString()
-                      : "-"}
+                    {selectedProject.createdAt ? new Date(selectedProject.createdAt).toLocaleString() : "-"}
                   </span>
                 </div>
               </div>
