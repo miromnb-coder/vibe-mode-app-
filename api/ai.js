@@ -7,26 +7,45 @@ export default async function handler(req, res) {
 
   if (!prompt) {
     return res.status(200).json({
-      text: `<!doctype html>
+      type: "project",
+      title: "No prompt",
+      summary: "Empty prompt fallback",
+      files: {
+        "index.html": `<!doctype html>
 <html lang="fi">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ei promptia</title>
+  <title>No prompt</title>
   <style>
-    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0b0f1a;color:#fff;display:grid;place-items:center;min-height:100vh;padding:24px}
-    .card{max-width:720px;width:100%;background:#111827;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:24px;box-shadow:0 0 30px rgba(62,248,208,.12)}
-    h1{margin:0 0 8px;color:#3ef8d0}
-    p{margin:0;color:rgba(255,255,255,.72)}
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0b0f1a;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .card {
+      max-width: 720px;
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 24px;
+    }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>❌ Ei promptia</h1>
-    <p>Kirjoita mitä appia haluat tehdä.</p>
+    <p>Kirjoita mitä appia haluat.</p>
   </div>
 </body>
-</html>`
+</html>`,
+      },
     });
   }
 
@@ -43,7 +62,7 @@ export default async function handler(req, res) {
 
   const detectType = (text) => {
     if (/(todo|tehtävä|task|checklist|list)/i.test(text)) return "todo";
-    if (/(muisti|note|notes|memo|memoit)/i.test(text)) return "notes";
+    if (/(muisti|note|notes|memo)/i.test(text)) return "notes";
     if (/(laskin|calculator|calc)/i.test(text)) return "calculator";
     if (/(kello|clock|timer|pomodoro)/i.test(text)) return "timer";
     if (/(quiz|visa|testi|kysely)/i.test(text)) return "quiz";
@@ -55,7 +74,7 @@ export default async function handler(req, res) {
     return "generic";
   };
 
-  const makeShell = ({ title, accent = "#3ef8d0", body, styles = "", script = "" }) => {
+  const makeShell = ({ title, body, styles = "", script = "" }) => {
     const safeTitle = escapeHTML(title);
     const safeScript = String(script).replace(/<\/script>/gi, "<\\/script>");
 
@@ -73,7 +92,7 @@ export default async function handler(req, res) {
       --line: rgba(62, 248, 208, 0.18);
       --text: #e8fff9;
       --muted: rgba(232, 255, 249, 0.72);
-      --accent: ${accent};
+      --accent: #3ef8d0;
     }
     * { box-sizing: border-box; }
     body {
@@ -147,7 +166,7 @@ export default async function handler(req, res) {
   const apps = {
     todo: () =>
       makeShell({
-        title: `${prompt}`,
+        title: prompt,
         body: `
           <h1>To-do app</h1>
           <p>Lisää, merkitse valmiiksi ja poista tehtäviä.</p>
@@ -183,7 +202,7 @@ export default async function handler(req, res) {
 
     notes: () =>
       makeShell({
-        title: `${prompt}`,
+        title: prompt,
         body: `
           <h1>Notes app</h1>
           <p>Kirjoita muistiinpanot ja tallenna ne selaimeen.</p>
@@ -241,7 +260,7 @@ export default async function handler(req, res) {
 
     calculator: () =>
       makeShell({
-        title: `${prompt}`,
+        title: prompt,
         body: `
           <h1>Laskin</h1>
           <p>Syötä lasku ja saat tuloksen heti.</p>
@@ -267,7 +286,7 @@ export default async function handler(req, res) {
 
     timer: () =>
       makeShell({
-        title: `${prompt}`,
+        title: prompt,
         body: `
           <h1>Timer / Pomodoro</h1>
           <p>Käynnistä ajastin ja seuraa aikaa.</p>
@@ -308,7 +327,7 @@ export default async function handler(req, res) {
 
     quiz: () =>
       makeShell({
-        title: `${prompt}`,
+        title: prompt,
         body: `
           <h1>Quiz app</h1>
           <p>Pieni tietovisa, joka näyttää pisteet.</p>
@@ -337,7 +356,7 @@ export default async function handler(req, res) {
 
     chat: () =>
       makeShell({
-        title: `${prompt}`,
+        title: prompt,
         body: `
           <h1>Chat app</h1>
           <p>Lisää viestejä ja katso niitä listassa.</p>
@@ -367,7 +386,7 @@ export default async function handler(req, res) {
 
     dashboard: () =>
       makeShell({
-        title: `${prompt}`,
+        title: prompt,
         body: `
           <h1>Dashboard</h1>
           <p>Tilastoja ja kortteja futuristisella ulkoasulla.</p>
@@ -381,7 +400,7 @@ export default async function handler(req, res) {
 
     habit: () =>
       makeShell({
-        title: `${prompt}`,
+        title: prompt,
         body: `
           <h1>Habit tracker</h1>
           <p>Merkitse päivän rutiinit tehdyiksi.</p>
@@ -420,7 +439,7 @@ export default async function handler(req, res) {
 
     landing: () =>
       makeShell({
-        title: `${prompt}`,
+        title: prompt,
         body: `
           <h1>Landing page</h1>
           <p>Tyylikäs etusivu tuotteelle tai palvelulle.</p>
@@ -434,7 +453,7 @@ export default async function handler(req, res) {
 
     game: () =>
       makeShell({
-        title: `${prompt}`,
+        title: prompt,
         body: `
           <h1>Clicker game</h1>
           <p>Paina nappia ja kasvata pistettä.</p>
@@ -455,7 +474,7 @@ export default async function handler(req, res) {
 
     generic: () =>
       makeShell({
-        title: `${prompt}`,
+        title: prompt,
         body: `
           <h1>${safePrompt}</h1>
           <p>AI teki tästä yleisen appin, koska tyyppiä ei tunnistettu tarkasti.</p>
