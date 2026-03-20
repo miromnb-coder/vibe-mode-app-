@@ -17,10 +17,7 @@ export default async function handler(req, res) {
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
 
-  const escapeScript = (s = "") =>
-    String(s).replaceAll("</script>", "<\\/script>");
-
-  const buildFallbackHtml = (titleText, summaryText) => {
+  const fallbackHtml = (titleText, summaryText) => {
     const safeTitle = escapeHTML(titleText);
     const safeSummary = escapeHTML(summaryText);
 
@@ -185,56 +182,7 @@ export default async function handler(req, res) {
 </html>`;
   };
 
-  const composeHtml = (obj) => {
-    const title = String(obj?.title || "Generated App");
-    const summary = String(obj?.summary || "AI-generated app");
-    const html = String(obj?.html || "").trim();
-    const css = String(obj?.css || "");
-    const js = String(obj?.js || "");
-
-    if (!html) {
-      return buildFallbackHtml(title, summary);
-    }
-
-    let finalHtml = html;
-
-    if (css) {
-      if (finalHtml.includes("</head>")) {
-        finalHtml = finalHtml.replace("</head>", `<style>${css}</style></head>`);
-      } else {
-        finalHtml = `<style>${css}</style>${finalHtml}`;
-      }
-    }
-
-    if (js) {
-      const safeJs = escapeScript(js);
-      if (finalHtml.includes("</body>")) {
-        finalHtml = finalHtml.replace("</body>", `<script>${safeJs}</script></body>`);
-      } else {
-        finalHtml += `<script>${safeJs}</script>`;
-      }
-    }
-
-    if (!/<html[\s>]/i.test(finalHtml)) {
-      finalHtml = `<!doctype html>
-<html lang="fi">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${escapeHTML(title)}</title>
-  ${css ? `<style>${css}</style>` : ""}
-</head>
-<body>
-  ${finalHtml}
-  ${js ? `<script>${escapeScript(js)}</script>` : ""}
-</body>
-</html>`;
-    }
-
-    return finalHtml;
-  };
-
-  const fallback = buildFallbackHtml(prompt, `AI tekee tästä appin: ${prompt}`);
+  const fallback = fallbackHtml(prompt, `AI tekee tästä appin: ${prompt}`);
 
   try {
     if (!process.env.GROQ_API_KEY) {
@@ -242,7 +190,9 @@ export default async function handler(req, res) {
         type: "project",
         title: prompt,
         summary: "Fallback app",
-        text: fallback,
+        files: {
+          "index.html": fallback,
+        },
       });
     }
 
@@ -261,8 +211,8 @@ export default async function handler(req, res) {
             content: [
               "You are Halo Builder.",
               "Return ONLY valid JSON.",
-              "If the user wants an app, return this shape:",
-              `{ "type": "project", "title": "App name", "summary": "Short summary", "html": "<!doctype html>...</html>", "css": "optional css", "js": "optional js" }`,
+              "If the user wants an app, return this exact shape:",
+              `{ "type": "project", "title": "App name", "summary": "Short summary", "files": { "index.html": "<!doctype html>...</html>", "style.css": "optional css", "app.js": "optional js" } }`,
               "If it is not an app request, return:",
               `{ "type": "chat", "text": "..." }`,
               "No markdown. No backticks. No explanation outside JSON.",
@@ -281,7 +231,9 @@ export default async function handler(req, res) {
         type: "project",
         title: prompt,
         summary: "Fallback app",
-        text: fallback,
+        files: {
+          "index.html": fallback,
+        },
       });
     }
 
@@ -292,40 +244,51 @@ export default async function handler(req, res) {
       .replaceAll("```", "")
       .trim();
 
+    let parsed;
     try {
-      const parsed = JSON.parse(cleaned);
-
-      if (parsed?.type === "chat") {
-        return res.status(200).json({
-          type: "chat",
-          text: String(parsed.text || "No response"),
-        });
-      }
-
-      const title = String(parsed?.title || prompt || "Generated App");
-      const summary = String(parsed?.summary || "AI-generated app");
-      const finalHtml = composeHtml(parsed);
-
-      return res.status(200).json({
-        type: "project",
-        title,
-        summary,
-        text: finalHtml,
-      });
+      parsed = JSON.parse(cleaned);
     } catch {
       return res.status(200).json({
         type: "project",
         title: prompt,
         summary: "Generated app",
-        text: fallback,
+        files: {
+          "index.html": fallback,
+        },
       });
     }
+
+    if (parsed?.type === "chat") {
+      return res.status(200).json({
+        type: "chat",
+        text: String(parsed.text || "No response"),
+      });
+    }
+
+    const title = String(parsed?.title || prompt || "Generated App");
+    const summary = String(parsed?.summary || "AI-generated app");
+
+    let files = parsed?.files || {};
+    if (typeof files !== "object" || Array.isArray(files)) files = {};
+
+    if (!files["index.html"]) {
+      files["index.html"] = fallbackHtml(title, summary);
+    }
+
+    return res.status(200).json({
+      type: "project",
+      title,
+      summary,
+      files,
+    });
   } catch (err) {
     return res.status(200).json({
       type: "project",
       title: prompt,
       summary: "Fallback app",
-      text: fallback,
+      files: {
+        "index.html": fallback,
+      },
       error: String(err.message || err),
     });
   }
