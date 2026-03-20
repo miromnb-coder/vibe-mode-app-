@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const STORAGE = {
-  projects: "halo_v5_projects",
-  memory: "halo_v5_memory",
-  selected: "halo_v5_selected",
+  projects: "halo_v6_projects",
+  memory: "halo_v6_memory",
+  selected: "halo_v6_selected",
 };
 
 function loadJSON(key, fallback) {
@@ -30,16 +30,6 @@ function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
 
-function normalizeFiles(files = {}) {
-  const out = {};
-  for (const [name, content] of Object.entries(files || {})) {
-    out[name] = Array.isArray(content)
-      ? content.map((line) => String(line)).join("\n")
-      : String(content ?? "");
-  }
-  return out;
-}
-
 function escapeScriptTag(js = "") {
   return String(js).replace(/<\/script>/gi, "<\\/script>");
 }
@@ -53,18 +43,9 @@ function buildPreviewDoc(files = {}) {
   if (!html) {
     return `<!doctype html>
 <html>
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>${css}</style>
-</head>
-<body>
-  <div style="font-family:-apple-system,sans-serif;padding:24px;">
-    <h2>No index.html</h2>
-    <p>This project does not include a preview file.</p>
-  </div>
-  <script>${safeJs}</script>
-</body>
+  <body style="margin:0;font-family:-apple-system,sans-serif;display:grid;place-items:center;min-height:100vh;background:#fff;color:#111;">
+    <div>No index.html</div>
+  </body>
 </html>`;
   }
 
@@ -124,7 +105,9 @@ export default function Home() {
   }, [projects, memory, selectedId]);
 
   useEffect(() => {
-    if (!selectedId && projects.length > 0) setSelectedId(projects[0].id);
+    if (!selectedId && projects.length > 0) {
+      setSelectedId(projects[0].id);
+    }
   }, [projects, selectedId]);
 
   const selectedProject = useMemo(() => {
@@ -144,17 +127,13 @@ export default function Home() {
     if (!selectedProject) {
       return `<!doctype html>
 <html>
-<body style="margin:0;font-family:-apple-system,sans-serif;display:grid;place-items:center;min-height:100vh;background:#fff;color:#111;">
-  <div>Select a project</div>
-</body>
+  <body style="margin:0;font-family:-apple-system,sans-serif;display:grid;place-items:center;min-height:100vh;background:#fff;color:#111;">
+    <div>Valitse projekti</div>
+  </body>
 </html>`;
     }
     return buildPreviewDoc(selectedProject.files || {});
   }, [selectedProject]);
-
-  function persistMemory(nextMemory) {
-    setMemory(nextMemory);
-  }
 
   function pushMemory(role, content) {
     setMemory((prev) => [...prev.slice(-23), { role, content }]);
@@ -181,7 +160,7 @@ export default function Home() {
       const data = await askAI(text);
 
       if (data?.type === "project") {
-        const files = normalizeFiles(data.files || {});
+        const files = data.files || {};
         const project = {
           id: uid(),
           title: String(data.title || "Untitled App"),
@@ -204,13 +183,13 @@ export default function Home() {
 
       const reply = String(data?.text || "No response");
       pushMemory("assistant", reply);
-      alert(reply);
       setStatus("Chat");
+      alert(reply);
     } catch (err) {
       const msg = `ERROR: ${err.message}`;
       pushMemory("assistant", msg);
-      alert(msg);
       setStatus("Error");
+      alert(msg);
     } finally {
       setLoading(false);
       setTimeout(() => setStatus("Ready"), 900);
@@ -231,6 +210,7 @@ export default function Home() {
     if (selectedId === id) {
       const next = projects.find((p) => p.id !== id);
       setSelectedId(next ? next.id : null);
+      setActiveFile("index.html");
     }
   }
 
@@ -318,7 +298,7 @@ export default function Home() {
       <header className="topbar">
         <div className="brand">
           <span className="spark">✦</span>
-          <span>Halo Builder V5</span>
+          <span>Halo Builder V6</span>
         </div>
         <div className="topbar-right">
           <span className="pill">{status}</span>
