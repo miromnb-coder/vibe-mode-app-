@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const STORAGE = {
-  projects: "halo_v6_projects",
-  memory: "halo_v6_memory",
-  selected: "halo_v6_selected",
+  projects: "halo_v5_projects",
+  memory: "halo_v5_memory",
+  selected: "halo_v5_selected",
 };
 
 function loadJSON(key, fallback) {
@@ -52,13 +52,19 @@ function buildPreviewDoc(files = {}) {
   let doc = html;
 
   if (css) {
-    if (doc.includes("</head>")) doc = doc.replace("</head>", `<style>${css}</style></head>`);
-    else doc = `<style>${css}</style>${doc}`;
+    if (doc.includes("</head>")) {
+      doc = doc.replace("</head>", `<style>${css}</style></head>`);
+    } else {
+      doc = `<style>${css}</style>${doc}`;
+    }
   }
 
   if (js) {
-    if (doc.includes("</body>")) doc = doc.replace("</body>", `<script>${safeJs}</script></body>`);
-    else doc += `<script>${safeJs}</script>`;
+    if (doc.includes("</body>")) {
+      doc = doc.replace("</body>", `<script>${safeJs}</script></body>`);
+    } else {
+      doc += `<script>${safeJs}</script>`;
+    }
   }
 
   if (!/<html[\s>]/i.test(doc)) {
@@ -298,7 +304,7 @@ export default function Home() {
       <header className="topbar">
         <div className="brand">
           <span className="spark">✦</span>
-          <span>Halo Builder V6</span>
+          <span>Halo Builder V5</span>
         </div>
         <div className="topbar-right">
           <span className="pill">{status}</span>
