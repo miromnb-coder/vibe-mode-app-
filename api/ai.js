@@ -1,14 +1,7 @@
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const MODEL = "llama-3.1-8b-instant";
 
-function stripCodeFences(text = "") {
-  return String(text)
-    .replace(/^```(?:json|js|javascript|html)?\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
-}
-
-function extractFirstJsonBlock(text = "") {
+function extractFirstJsonObject(text = "") {
   const s = String(text);
   const start = s.indexOf("{");
   if (start === -1) return null;
@@ -59,7 +52,7 @@ function normalizeFiles(files = {}) {
   return out;
 }
 
-function normalizeParsedObject(obj) {
+function normalizeResponse(obj) {
   if (!obj || typeof obj !== "object") {
     return { type: "chat", text: "No response" };
   }
@@ -80,10 +73,7 @@ function normalizeParsedObject(obj) {
     };
   }
 
-  return {
-    type: "chat",
-    text: "No response",
-  };
+  return { type: "chat", text: "No response" };
 }
 
 export default async function handler(req, res) {
@@ -94,8 +84,12 @@ export default async function handler(req, res) {
   try {
     const { prompt, memory = [] } = req.body || {};
 
+    if (!prompt) {
+      return res.status(400).json({ type: "chat", text: "No prompt provided" });
+    }
+
     if (!process.env.GROQ_API_KEY) {
-      return res.status(500).json({ error: "Missing GROQ_API_KEY" });
+      return res.status(500).json({ type: "chat", text: "Missing GROQ_API_KEY" });
     }
 
     const response = await fetch(GROQ_URL, {
@@ -106,47 +100,62 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: MODEL,
-        temperature: 0.25,
+        temperature: 0.2,
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "halo_builder_v5",
+            strict: true,
+            schema: {
+              type: "object",
+              properties: {
+                type: { enum: ["project", "chat"] },
+                title: { type: "string" },
+                summary: { type: "string" },
+                text: { type: "string" },
+                files: {
+                  type: "object",
+                  properties: {
+                    "index.html": { type: "string" },
+                    "style.css": { type: "string" },
+                    "app.js": { type: "string" }
+                  },
+                  additionalProperties: { type: "string" }
+                }
+              },
+              required: ["type"],
+              additionalProperties: false
+            }
+          }
+        },
         messages: [
           {
             role: "system",
             content: `
-You are Halo Builder V4.
+You are Halo Builder V5.
 
 Return ONLY valid JSON.
 
 If the user wants to build an app, return:
-
 {
   "type": "project",
   "title": "App name",
   "summary": "Short one-line summary",
   "files": {
-    "index.html": [
-      "<!doctype html>",
-      "<html>",
-      "...lines...",
-      "</html>"
-    ],
-    "style.css": [
-      "body {",
-      "  margin: 0;",
-      "}"
-    ],
-    "app.js": [
-      "console.log('hello');"
-    ]
+    "index.html": "<!doctype html>...",
+    "style.css": "body { ... }",
+    "app.js": "console.log('hello');"
   }
 }
 
 Rules:
-- Always use arrays of lines for file contents.
-- Always make the app complete and runnable.
-- Keep it polished, modern, mobile-friendly.
-- No markdown, no code fences, no explanations outside JSON.
+- Return complete, runnable HTML/CSS/JS.
+- Make the app modern and mobile-friendly.
+- Do not use markdown.
+- Do not use backticks.
+- Do not add explanations outside JSON.
 
 If the user is asking a normal question, return:
-
 {
   "type": "chat",
   "text": "..."
@@ -154,36 +163,36 @@ If the user is asking a normal question, return:
             `.trim(),
           },
           ...(Array.isArray(memory) ? memory.slice(-12) : []),
-          {
-            role: "user",
-            content: String(prompt || ""),
-          },
+          { role: "user", content: String(prompt) },
         ],
       }),
     });
 
     const data = await response.json();
-    const rawText = data?.choices?.[0]?.message?.content || "";
-    const cleaned = stripCodeFences(rawText);
+    const raw = data?.choices?.[0]?.message?.content || "";
 
-    const jsonText = extractFirstJsonBlock(cleaned);
+    if (!raw) {
+      return res.status(200).json({ type: "chat", text: "No response" });
+    }
+
+    const jsonText = extractFirstJsonObject(raw);
     if (jsonText) {
       try {
-        const parsed = JSON.parse(jsonText);
-        return res.status(200).json(normalizeParsedObject(parsed));
+        return res.status(200).json(normalizeResponse(JSON.parse(jsonText)));
       } catch {
         // fall through
       }
     }
 
+    try {
+      return res.status(200).json(normalizeResponse(JSON.parse(raw)));
+    } catch {
+      return res.status(200).json({ type: "chat", text: raw });
+    }
+  } catch (err) {
     return res.status(200).json({
       type: "chat",
-      text: cleaned || "No response",
-    });
-  } catch (error) {
-    return res.status(200).json({
-      type: "chat",
-      text: `ERROR: ${error.message}`,
+      text: `ERROR: ${err.message}`,
     });
   }
 }
