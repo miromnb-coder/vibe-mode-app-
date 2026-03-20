@@ -2,59 +2,91 @@ const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const MODEL = "llama-3.1-8b-instant";
 
 function stripCodeFences(text = "") {
-  return text
-    .replace(/^```[a-zA-Z]*\n?/m, "")
-    .replace(/\n?```$/m, "")
+  return String(text)
+    .replace(/^```(?:json|js|javascript|html)?\s*/i, "")
+    .replace(/\s*```$/i, "")
     .trim();
 }
 
-function extractTag(text, tag) {
-  const re = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "i");
-  const match = text.match(re);
-  return match ? match[1].trim() : "";
+function extractFirstJsonBlock(text = "") {
+  const s = String(text);
+  const start = s.indexOf("{");
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = start; i < s.length; i++) {
+    const ch = s[i];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === "\\") {
+        escaped = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (ch === "{") depth++;
+    if (ch === "}") depth--;
+
+    if (depth === 0) {
+      return s.slice(start, i + 1);
+    }
+  }
+
+  return null;
 }
 
-function extractCdata(text, tag) {
-  const re = new RegExp(
-    `<${tag}>\\s*<!\$begin:math:display$CDATA\\\\\[\(\[\\\\s\\\\S\]\*\?\)\\$end:math:display$\\]>\\s*</${tag}>`,
-    "i"
-  );
-  const match = text.match(re);
-  return match ? match[1].trim() : "";
+function normalizeFiles(files = {}) {
+  const out = {};
+  for (const [name, content] of Object.entries(files || {})) {
+    if (Array.isArray(content)) {
+      out[name] = content.map((line) => String(line)).join("\n");
+    } else {
+      out[name] = String(content ?? "");
+    }
+  }
+  return out;
 }
 
-function parseModelResponse(rawText) {
-  const text = stripCodeFences(rawText);
+function normalizeParsedObject(obj) {
+  if (!obj || typeof obj !== "object") {
+    return { type: "chat", text: "No response" };
+  }
 
-  const kind = extractTag(text, "kind") || extractTag(text, "type");
-  const title = extractTag(text, "title");
-  const summary = extractTag(text, "summary");
-  const code = extractCdata(text, "code") || extractTag(text, "code");
-  const chat = extractTag(text, "chat") || extractTag(text, "reply") || text;
-
-  if (code) {
+  if (obj.type === "project") {
     return {
-      kind: "project",
-      title: title || "Untitled App",
-      summary: summary || "AI-generated app",
-      code: code.trim(),
+      type: "project",
+      title: String(obj.title || "Untitled App"),
+      summary: String(obj.summary || "Generated app"),
+      files: normalizeFiles(obj.files || {}),
     };
   }
 
-  if (kind.toLowerCase() === "chat" || chat) {
+  if (obj.type === "chat") {
     return {
-      kind: "chat",
-      text: chat.trim(),
+      type: "chat",
+      text: String(obj.text || obj.reply || "No response"),
     };
   }
 
   return {
-    kind: "chat",
-    text: text || "No response",
+    type: "chat",
+    text: "No response",
   };
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Only POST allowed" });
   }
@@ -74,43 +106,57 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         model: MODEL,
-        temperature: 0.4,
+        temperature: 0.25,
         messages: [
           {
             role: "system",
             content: `
-You are Halo Builder V2.
+You are Halo Builder V4.
 
-Goal:
-- If the user wants to build an app, return exactly this format:
-<project>
-  <kind>project</kind>
-  <title>App Name</title>
-  <summary>Short one-line summary</summary>
-  <code><![CDATA[
-<!DOCTYPE html>
-<html>
-...
-</html>
-  ]]></code>
-</project>
+Return ONLY valid JSON.
 
-Rules for app generation:
-- Return a complete single-file HTML app.
-- Include CSS inside <style> and JS inside <script>.
-- No markdown, no backticks, no explanations outside the tags.
-- Make the app polished, modern, and mobile-friendly.
+If the user wants to build an app, return:
 
-If the user is asking a normal question or chat, return:
-<chat>Your answer here</chat>
+{
+  "type": "project",
+  "title": "App name",
+  "summary": "Short one-line summary",
+  "files": {
+    "index.html": [
+      "<!doctype html>",
+      "<html>",
+      "...lines...",
+      "</html>"
+    ],
+    "style.css": [
+      "body {",
+      "  margin: 0;",
+      "}"
+    ],
+    "app.js": [
+      "console.log('hello');"
+    ]
+  }
+}
 
-Keep it concise and useful.
+Rules:
+- Always use arrays of lines for file contents.
+- Always make the app complete and runnable.
+- Keep it polished, modern, mobile-friendly.
+- No markdown, no code fences, no explanations outside JSON.
+
+If the user is asking a normal question, return:
+
+{
+  "type": "chat",
+  "text": "..."
+}
             `.trim(),
           },
           ...(Array.isArray(memory) ? memory.slice(-12) : []),
           {
             role: "user",
-            content: prompt || "",
+            content: String(prompt || ""),
           },
         ],
       }),
@@ -118,19 +164,26 @@ Keep it concise and useful.
 
     const data = await response.json();
     const rawText = data?.choices?.[0]?.message?.content || "";
+    const cleaned = stripCodeFences(rawText);
 
-    if (!rawText) {
-      return res.status(200).json({
-        kind: "chat",
-        text: "No response",
-      });
+    const jsonText = extractFirstJsonBlock(cleaned);
+    if (jsonText) {
+      try {
+        const parsed = JSON.parse(jsonText);
+        return res.status(200).json(normalizeParsedObject(parsed));
+      } catch {
+        // fall through
+      }
     }
 
-    return res.status(200).json(parseModelResponse(rawText));
+    return res.status(200).json({
+      type: "chat",
+      text: cleaned || "No response",
+    });
   } catch (error) {
     return res.status(200).json({
-      kind: "chat",
+      type: "chat",
       text: `ERROR: ${error.message}`,
     });
   }
-};
+}
